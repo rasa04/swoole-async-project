@@ -11,7 +11,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Servers\\": "src/Servers"
+            "App\\": "src/"
         }
     }
 }

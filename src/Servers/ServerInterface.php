@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Servers;
+namespace App\Servers;
 
 interface ServerInterface
 {
