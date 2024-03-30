@@ -6,5 +6,5 @@ namespace App\Servers;
 
 interface ServerInterface
 {
-    public static function run(callable $onStartCallback, callable $onRequestCallback): void;
+    public static function run(callable $onRequestCallback, ?callable $onStartCallback = null): void;
 }

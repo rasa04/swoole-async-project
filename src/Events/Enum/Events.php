@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Enum\Events;
+namespace App\Events\Enum;
 
 enum Events: string
 {

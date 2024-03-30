@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Servers;
 
-use App\Enum\Events\Table\Columns;
-use App\Enum\Events\Table\Settings;
-use App\Services\Events;
-use OpenSwoole\Timer;
+use App\Events\Enum\Table\Columns;
+use App\Services\EventsService;
 use OpenSwoole\Core\Psr\{Response, ServerRequest};
 use OpenSwoole\Http\Request as SwooleRawRequest;
 use OpenSwoole\Http\Response as SwooleRawResponse;
-use OpenSwoole\Table;
+use OpenSwoole\Timer;
 use Swoole\Constant;
 use Swoole\Http\Server;
 use Throwable;
@@ -21,14 +19,21 @@ final readonly class Http implements ServerInterface
     public const string DEFAULT_ADDRESS = '127.0.0.1';
     public const int DEFAULT_PORT = 9501;
 
-    public static function run(callable $onStartCallback, callable $onRequestCallback): void
+    public static function run(callable $onRequestCallback, ?callable $onStartCallback = null): void
     {
         try {
             $server = new Server(self::DEFAULT_ADDRESS, self::DEFAULT_PORT);
 
             $server->on(
                 Constant::EVENT_START,
-                callback: $onStartCallback
+                callback: $onStartCallback ?? function (Server $server) {
+                    echo sprintf(
+                        'OpenSwoole http server is started at https://%s:%d%s',
+                        $server->host ?: self::DEFAULT_ADDRESS,
+                        $server->port ?: self::DEFAULT_PORT,
+                        PHP_EOL
+                    );
+                }
             );
 
             $server->on(
@@ -42,44 +47,35 @@ final readonly class Http implements ServerInterface
                 )
             );
 
-            self::setEvents();
+            self::setListeners();
+
             $server->start();
+
         } catch (Throwable $t) {
             dd($t->getMessage(), $t->getTrace(), $t);
         }
     }
 
-    private static function setEvents(): void
+    private static function setListeners(): void
     {
-        $table = new Table(Settings::TABLE_SIZE->value);
-        $table->column(
-            Columns::getValue(Columns::EVENT_KEY),
-            Columns::getType(Columns::EVENT_KEY),
-            Columns::getSize(Columns::EVENT_KEY)
-        );
-        $table->column(
-            Columns::getValue(Columns::EVENT_DATA),
-            Columns::getType(Columns::EVENT_DATA),
-            Columns::getSize(Columns::EVENT_DATA)
-        );
-        $table->create();
-
         global $app;
-        $app['events-table'] = $table;
+        /** @var EventsService $eventsService */
+        $eventsService = $app[EventsService::class];
 
-        Timer::tick(1000, function () use ($table) {
-            $daemonEvents = Events::getEvents();
+        Timer::tick(1000, function () use ($eventsService) {
+            $listeners = $eventsService->getListeners();
+            $table = $eventsService->getTable();
 
-            foreach ($table as $key => $event) {
-                if (!isset($daemonEvents[$event['event_key']])) {
+            foreach ($table as $rowKey => $event) {
+                if (!isset($listeners[$event[Columns::LISTENER_KEY->value]])) {
                     continue;
                 }
 
-                foreach ($daemonEvents[$event['event_key']] as $handler) {
-                    $handler($event['event_data']);
+                foreach ($listeners[$event[Columns::LISTENER_KEY->value]] as $handler) {
+                    $handler(unserialize($event[Columns::EVENT->value]));
                 }
 
-                $table->del($key);
+                $table->del($rowKey);
             }
         });
     }

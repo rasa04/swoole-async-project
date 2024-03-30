@@ -4,29 +4,31 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+use App\Events\RequestEvent;
+use App\Listeners\RequestEventListener;
 use App\Servers\Http;
-use App\Services\Events;
+use App\Services\EventsService;
 use OpenSwoole\Core\Psr\Response;
 use OpenSwoole\Core\Psr\ServerRequest;
 use OpenSwoole\Http\Server;
 use Psr\Http\Message\ResponseInterface;
 
+$eventsService = EventsService::getInstance()
+    ->addListeners([
+        new RequestEventListener
+    ]);
+
+global $app;
+$app[EventsService::class] = $eventsService;
+
 Http::run(
-    onStartCallback: function (Server $server) {
-        Events::addEvent(\App\Enum\Events\Events::REQUEST_EVENT->value, function (string $payload) {
-            sleep(5);
-            dump('test event happen', $payload);
-        });
-        echo "OpenSwoole http server is started at http://127.0.0.1:9501\n";
-    },
+    onRequestCallback: function (ServerRequest $request, Server $server) use ($eventsService): ResponseInterface {
+        $data = ['new_test' => 'actually new'];
 
-    onRequestCallback: function (ServerRequest $request, Server $server): ResponseInterface {
-        $data = json_encode(['new_test' => 'actually new']);
-
-        Events::dispatch(\App\Enum\Events\Events::REQUEST_EVENT->value, $data);
+        $eventsService->dispatch(new RequestEvent($data));
 
         return (new Response(
-            body: $data,
+            body: json_encode($data),
             headers: ['Content-Type' => 'application/json']
         ));
     }
