@@ -31,12 +31,14 @@ final class RequestEvent implements EventInterface
         return $this->key;
     }
 
-    #[Override] public function getPayload(): array
+    #[Override]
+    public function getPayload(): array
     {
         return $this->payload;
     }
 
-    #[Override] public function getJsonSerialized(): string
+    #[Override]
+    public function getJsonSerialized(): string
     {
         return json_encode($this->getPayload());
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Servers;
 
 use App\Events\Enum\Table\Columns;
+use App\Servers\Interfaces\ServerInterface;
 use App\Services\EventsService;
 use OpenSwoole\Core\Psr\{Response, ServerRequest};
 use OpenSwoole\Http\Request as SwooleRawRequest;
@@ -19,14 +20,14 @@ final readonly class Http implements ServerInterface
     public const string DEFAULT_ADDRESS = '127.0.0.1';
     public const int DEFAULT_PORT = 9501;
 
-    public static function run(callable $onRequestCallback, ?callable $onStartCallback = null): void
+    public static function run(callable $onRequestCallback, ?array $callbacks = null): void
     {
         try {
             $server = new Server(self::DEFAULT_ADDRESS, self::DEFAULT_PORT);
 
             $server->on(
                 Constant::EVENT_START,
-                callback: $onStartCallback ?? function (Server $server) {
+                callback: $callbacks[Constant::EVENT_START] ?? function (Server $server) {
                     echo sprintf(
                         'OpenSwoole http server is started at https://%s:%d%s',
                         $server->host ?: self::DEFAULT_ADDRESS,
@@ -62,7 +63,8 @@ final readonly class Http implements ServerInterface
         /** @var EventsService $eventsService */
         $eventsService = $app[EventsService::class];
 
-        Timer::tick(1000, function () use ($eventsService) {
+        // Time should be greater than handler executing time
+        Timer::tick(2005, function () use ($eventsService) {
             $listeners = $eventsService->getListeners();
             $table = $eventsService->getTable();
 

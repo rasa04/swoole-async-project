@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Listeners;
 
 use App\Events\EventInterface;
+use OpenSwoole\Coroutine;
 
 final readonly class RequestEventListener implements ListenerInterface
 {
@@ -13,7 +14,7 @@ final readonly class RequestEventListener implements ListenerInterface
 
     public function __invoke(EventInterface $event): void
     {
-        sleep(3);
+        Coroutine::sleep(2);
         dump($event->getPayload(), time());
     }
 }

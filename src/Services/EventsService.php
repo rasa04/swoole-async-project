@@ -59,6 +59,10 @@ final class EventsService
     {
         /** @var ListenerInterface $listener */
         foreach ($listeners as $listener) {
+            if (!$listener instanceof ListenerInterface) {
+                continue;
+            }
+
             if (!isset(self::getInstance()->listeners[$listener::class])) {
                 self::getInstance()->listeners[$listener::class] = [];
             }
